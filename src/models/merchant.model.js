@@ -23,9 +23,19 @@ const merchantSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    webhookSecretHash: {
-        type: String,
-        required: true
+    webhookEncryption: {
+        encryptedWebhookSecret: {
+            type: String,
+            required: true
+        },
+        iv: {
+            type: String,
+            required: true
+        },
+        authTag: {
+            type: String,
+            required: true
+        }
     },
     payoutWallet: {
         type: String,
