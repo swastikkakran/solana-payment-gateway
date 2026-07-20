@@ -27,6 +27,19 @@ const normalApiMiddleware = asyncHandler(async function (req, res, next) {
 
     req.user = apiKey
     next()
-
-
 })
+
+const strictApiMiddleware = asyncHandler(async function (req, res, next) {
+    
+    const { 'x-api-key': apiKey, 'x-api-secret': apiSecret } = req.headers;
+
+    const existingMerchant = checkCredentials(apiKey)
+    if (!existingMerchant) ApiError(401, "Unauthorized access!")
+    const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
+    if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
+
+    req.user = apiKey
+    next()
+})
+
+export { normalApiMiddleware, strictApiMiddleware }
