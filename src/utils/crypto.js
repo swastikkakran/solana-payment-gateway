@@ -8,7 +8,7 @@ const generateSecretKey = function () {
     return crypto.randomBytes(32).toString("hex")
 }
 
-const encryptionKey = process.env.ENCRYPTION_MASTER_KEY;
+const encryptionKey = Buffer.from(process.env.ENCRYPTION_MASTER_KEY, "hex");
 const algorithm = 'aes-256-gcm';
 
 const encrypt = function (text) {
