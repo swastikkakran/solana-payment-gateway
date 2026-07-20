@@ -23,7 +23,7 @@ const merchantSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    webhookSecret: {
+    webhookSecretHash: {
         type: String,
         required: true
     },
