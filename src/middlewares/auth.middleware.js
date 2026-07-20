@@ -13,32 +13,43 @@ const checkCredentials = async function (apiKey) {
 const normalApiMiddleware = asyncHandler(async function (req, res, next) {
     
     const { 'x-api-key': apiKey, 'x-api-secret': apiSecret } = req.headers;
+    if (!apiKey || !apiSecret) {
+        throw new ApiError(401, "Missing API Key or Secret Header");
+    }
 
-    const existingMerchant = checkCredentials(apiKey)
+    const existingMerchant = await checkCredentials(apiKey)
+
     if (!existingMerchant) {
         const tryPreviousCredentials = await merchantModel.findOne({ "previousCredentials.apiKey": apiKey })
         if (!tryPreviousCredentials) throw new ApiError(401, "Unauthorized access!")
-    }
-    const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
-    if (!isApiSecretValid) {
-        const tryPreviousSecret = await bcrypt.compare(apiSecret, existingMerchant.previousCredentials.apiSecret)
-        if (!tryPreviousSecret) throw new ApiError(401, "Unauthorized access!")
-    }
 
-    req.user = apiKey
+        const tryPreviousSecret = await bcrypt.compare(apiSecret, tryPreviousCredentials.previousCredentials.apiSecretHash)
+        if (!tryPreviousSecret) throw new ApiError(401, "Unauthorized access!")
+        
+        req.merchant = tryPreviousCredentials
+    }
+    else {
+        const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
+        if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
+        req.merchant = existingMerchant
+        }
+
     next()
 })
 
 const strictApiMiddleware = asyncHandler(async function (req, res, next) {
     
     const { 'x-api-key': apiKey, 'x-api-secret': apiSecret } = req.headers;
+    if (!apiKey || !apiSecret) {
+        throw new ApiError(401, "Missing API Key or Secret Header");
+    }
 
-    const existingMerchant = checkCredentials(apiKey)
-    if (!existingMerchant) ApiError(401, "Unauthorized access!")
+    const existingMerchant = await checkCredentials(apiKey)
+    if (!existingMerchant) throw new ApiError(401, "Unauthorized access!")
     const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
     if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
 
-    req.user = apiKey
+    req.user = existingMerchant
     next()
 })
 
