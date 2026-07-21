@@ -6,10 +6,20 @@ import { registerService, keyRotationService, deleteMerchantService } from "../s
 const registerController = asyncHandler(async function (req, res) {
     
     const { email, webhookUrl, payoutWallet } = req.body;
-    const registerPayload = registerService(email, webhookUrl, payoutWallet)
+    const registerPayload = await registerService(email, webhookUrl, payoutWallet)
 
     res
         .status(201)
         .json(new ApiResponse(201, registerPayload, "merchant registered successfully!"))
 })
 
+
+const keyRotationController = asyncHandler(async function (req, res) {
+    
+    const merchant = req.merchant;
+    const newKeys = await keyRotationService(merchant)
+
+    res
+        .send(201)
+        .json(new ApiResponse(201, newKeys, "keys rotated successfully!"))
+})
