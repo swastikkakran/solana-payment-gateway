@@ -23,3 +23,17 @@ const keyRotationController = asyncHandler(async function (req, res) {
         .send(201)
         .json(new ApiResponse(201, newKeys, "keys rotated successfully!"))
 })
+
+
+const deleteMerchantController = asyncHandler(async function (req, res) {
+    
+    const merchant = req.merchant;
+    const deletedMerchant = await deleteMerchantService(merchant);
+
+    res
+        .status(200)
+        .json(new ApiResponse(200, deletedMerchant, "merchant deleted successfully!"))
+})
+
+
+export { registerController, keyRotationController, deleteMerchantController }
