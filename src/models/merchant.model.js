@@ -41,13 +41,11 @@ const merchantSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    previousCredentials: [
-        {
+    previousCredentials: {
             apiKey: String,
             apiSecretHash: String,
             expiresAt: Date
         }
-    ]
 }, { timestamps: true });
 
 export const merchantModel = mongoose.model("merchant", merchantSchema);
