@@ -1,6 +1,7 @@
 import { ApiError } from "../utils/api-error.js";
 import { generateApiKey, generateSecretKey, encrypt } from "../utils/crypto.js";
 import { merchantModel } from "../models/merchant.model.js";
+import { paymentModel } from "../models/payment-request.model.js";
 import bcrypt from "bcrypt";
 
 
@@ -21,7 +22,7 @@ const registerService = async function (email, webhookUrl, payoutWallet) {
         apiKey: apiKey,
         apiSecretHash: apiSecretHash,
         webhookUrl: webhookUrl,
-        webhookSecretHash: {
+        webhookEncryption: {
             encryptedWebhookSecret: ciphertext,
             iv: iv,
             authTag: authTag
@@ -50,3 +51,14 @@ const keyRotationService = async function (merchant) {
 
     return { newApiKey, newApiSecret }
 }
+
+
+const deleteMerchantService = async function (merchant) {
+    
+    const pendingPayments = await paymentModel.findOne({ merchant: merchant._id, status: "pending" })
+    if (pendingPayments) throw new ApiError(400, "Pending payment for an order! Cannot perform account deletion.")
+    const deletedForm = await merchantModel.findByIdAndDelete(merchant._id)
+    return deletedForm
+}
+
+export { registerService, keyRotationService, deleteMerchantService }
