@@ -20,7 +20,7 @@ const keyRotationController = asyncHandler(async function (req, res) {
     const newKeys = await keyRotationService(merchant)
 
     res
-        .send(201)
+        .status(201)
         .json(new ApiResponse(201, newKeys, "keys rotated successfully!"))
 })
 
