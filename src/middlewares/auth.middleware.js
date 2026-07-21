@@ -22,6 +22,7 @@ const normalApiMiddleware = asyncHandler(async function (req, res, next) {
     if (!existingMerchant) {
         const tryPreviousCredentials = await merchantModel.findOne({ "previousCredentials.apiKey": apiKey })
         if (!tryPreviousCredentials) throw new ApiError(401, "Unauthorized access!")
+        if (tryPreviousCredentials.previousCredentials.expiresAt < new Date()) throw new ApiError(401, "Unauthorized access!")
 
         const tryPreviousSecret = await bcrypt.compare(apiSecret, tryPreviousCredentials.previousCredentials.apiSecretHash)
         if (!tryPreviousSecret) throw new ApiError(401, "Unauthorized access!")
@@ -49,7 +50,7 @@ const strictApiMiddleware = asyncHandler(async function (req, res, next) {
     const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
     if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
 
-    req.user = existingMerchant
+    req.merchant = existingMerchant
     next()
 })
 
