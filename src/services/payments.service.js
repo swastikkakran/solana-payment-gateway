@@ -36,3 +36,45 @@ const createPaymentService = async function (merchant, amount, currency, label, 
 
     return { solanaPayUrl, paymentRequestData };
 }
+
+
+const fetchSinglePaymentService = async function (merchant, paymentId) {
+    
+    const payment = await paymentModel.findOne({ _id: paymentId, merchant: merchant._id })
+    if (!payment) throw new ApiError(404, "No payment found!")
+
+    return payment
+}
+
+
+const fetchAllPaymentsService = async function (merchant, status, page = 1, limit = 20) {
+
+    const filter = { merchant: merchant._id };
+
+    if (status) {
+        if (!["pending", "confirmed", "expired", "failed"].includes(status)) {
+            throw new ApiError(400, "Invalid status filter");
+        }
+        filter.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [payments, totalCount] = await Promise.all([
+        paymentModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        paymentModel.countDocuments(filter)
+    ]);
+
+    return {
+        payments,
+        pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit)
+        }
+    };
+};
+
+
+export { createPaymentService, fetchSinglePaymentService, fetchAllPaymentsService }
