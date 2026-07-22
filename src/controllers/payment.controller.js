@@ -19,7 +19,7 @@ const createPaymentController = asyncHandler(async function (req, res) {
 const fetchSinglePaymentController = asyncHandler(async function (req, res) {
     
     const merchant = req.merchant;
-    const paymentId = req.query;
+    const paymentId = req.params.paymentId;
 
     const payment = await fetchSinglePaymentService(merchant, paymentId)
 
