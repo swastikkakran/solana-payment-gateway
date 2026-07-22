@@ -16,3 +16,15 @@ const createPaymentController = asyncHandler(async function (req, res) {
 })
 
 
+const fetchSinglePaymentController = asyncHandler(async function (req, res) {
+    
+    const merchant = req.merchant;
+    const paymentId = req.query;
+
+    const payment = await fetchSinglePaymentService(merchant, paymentId)
+
+    res
+        .status(200)
+        .json(new ApiResponse(200, payment, "payment fetched successfully."))
+})
+
