@@ -28,3 +28,18 @@ const fetchSinglePaymentController = asyncHandler(async function (req, res) {
         .json(new ApiResponse(200, payment, "payment fetched successfully."))
 })
 
+
+const fetchAllPaymentsController = asyncHandler(async function (req, res) {
+    
+    const merchant = req.merchant;
+    const { status, page, limit } = req.query;
+
+    const payments = await fetchAllPaymentsService(merchant, status, page, limit);
+
+    res
+        .status(200)
+        .json(new ApiResponse(200, payments, "payments fetched successfully!"))
+})
+
+
+export { createPaymentController, fetchSinglePaymentController, fetchAllPaymentsController }
