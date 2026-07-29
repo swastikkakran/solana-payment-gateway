@@ -3,7 +3,7 @@ import { paymentModel } from "../models/payment-request.model.js";
 
 const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed");
 
-const verifyTransaction = async function (signature, payment) {
+const verifyTransaction = async function (signature, merchant) {
 
     const tx = await connection.getTransaction(signature, {
         maxSupportedTransactionVersion: 0
@@ -15,14 +15,19 @@ const verifyTransaction = async function (signature, payment) {
 
     const accountKeys = tx.transaction.message.accountKeys.map(k => k.toBase58());
 
-    const referenceIncluded = accountKeys.includes(payment.reference);
-    if (!referenceIncluded) {
-        return { verified: false, reason: "Reference not found in transaction" };
+    const payment = await paymentModel.findOne({
+        merchant: merchant._id,
+        status: "pending",
+        reference: { $in: accountKeys }
+    });
+
+    if (!payment) {
+        return { verified: false, reason: "No matching pending payment found" };
     }
 
-    const recipientIndex = accountKeys.indexOf(payment.payoutWallet);
+    const recipientIndex = accountKeys.indexOf(merchant.payoutWallet);
     if (recipientIndex === -1) {
-        return { verified: false, reason: "Recipient not found in transaction" };
+        return { verified: false, payment, reason: "Recipient not found in transaction" };
     }
 
     let amountReceived;
@@ -31,38 +36,37 @@ const verifyTransaction = async function (signature, payment) {
     if (payment.currency === "SOL") {
         const preBalance = tx.meta.preBalances[recipientIndex];
         const postBalance = tx.meta.postBalances[recipientIndex];
-        amountReceived = (postBalance - preBalance) / 1e9; // lamports -> SOL
+        amountReceived = (postBalance - preBalance) / 1e9;
 
-        // sender = first account key that lost SOL balance
         const senderIndex = tx.meta.preBalances.findIndex(
             (bal, i) => bal > tx.meta.postBalances[i] && i !== recipientIndex
         );
         payerWallet = accountKeys[senderIndex];
     } else {
         const preTokenBalance = tx.meta.preTokenBalances.find(
-            b => accountKeys[b.accountIndex] === payment.payoutWallet
+            b => accountKeys[b.accountIndex] === merchant.payoutWallet
         );
         const postTokenBalance = tx.meta.postTokenBalances.find(
-            b => accountKeys[b.accountIndex] === payment.payoutWallet
+            b => accountKeys[b.accountIndex] === merchant.payoutWallet
         );
 
         if (!preTokenBalance || !postTokenBalance) {
-            return { verified: false, reason: "Token balance entries not found" };
+            return { verified: false, payment, reason: "Token balance entries not found" };
         }
 
         amountReceived = postTokenBalance.uiTokenAmount.uiAmount - preTokenBalance.uiTokenAmount.uiAmount;
 
         const senderTokenBalance = tx.meta.preTokenBalances.find(
-            b => b.mint === preTokenBalance.mint && accountKeys[b.accountIndex] !== payment.payoutWallet
+            b => b.mint === preTokenBalance.mint && accountKeys[b.accountIndex] !== merchant.payoutWallet
         );
         payerWallet = senderTokenBalance ? accountKeys[senderTokenBalance.accountIndex] : null;
     }
 
     if (amountReceived !== payment.amount) {
-        return { verified: false, reason: "Amount mismatch" };
+        return { verified: false, payment, reason: "Amount mismatch" };
     }
 
-    return { verified: true, payerWallet, transactionSignature: signature };
+    return { verified: true, payment, payerWallet, transactionSignature: signature };
 };
 
 
