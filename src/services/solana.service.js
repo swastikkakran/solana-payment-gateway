@@ -72,36 +72,24 @@ const verifyTransaction = async function (signature, merchant) {
 
 const reconcilePendingPayments = async function (merchant) {
 
-    const pendingPayments = await paymentModel.find({
-        merchant: merchant._id,
-        status: "pending",
-        expiresAt: { $gt: new Date() }
-    });
+    const recipientPubkey = new PublicKey(merchant.payoutWallet);
+    const signatures = await connection.getSignaturesForAddress(recipientPubkey, { limit: 50 });
 
-    for (const payment of pendingPayments) {
-        const referencePubkey = new PublicKey(payment.reference);
-        const signatures = await connection.getSignaturesForAddress(referencePubkey);
-
-        if (signatures.length === 0) continue;
-
-        const result = await verifyTransaction(signatures[0].signature, {
-            ...payment.toObject(),
-            payoutWallet: merchant.payoutWallet
-        });
+    for (const sigInfo of signatures) {
+        const result = await verifyTransaction(sigInfo.signature, merchant);
 
         if (result.verified) {
-            payment.status = "confirmed";
-            payment.transactionSignature = result.transactionSignature;
-            payment.payerWallet = result.payerWallet;
-            payment.confirmedAt = new Date();
-        } else {
-            payment.status = "failed";
+            result.payment.status = "confirmed";
+            result.payment.transactionSignature = result.transactionSignature;
+            result.payment.payerWallet = result.payerWallet;
+            result.payment.confirmedAt = new Date();
+            await result.payment.save();
         }
-
-        await payment.save();
+        // if not verified, either it's an unrelated tx (no matching payment)
+        // or a real mismatch — either way, nothing to update, just move on
     }
 
-    // sweep expired ones too
+    // separately sweep anything that's simply timed out with no tx ever found
     await paymentModel.updateMany(
         { merchant: merchant._id, status: "pending", expiresAt: { $lte: new Date() } },
         { status: "expired" }
