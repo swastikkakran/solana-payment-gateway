@@ -53,4 +53,9 @@ const disconnectMerchant = async function (merchantId) {
 };
 
 
+const isConnected = function (merchantId) {
+    return activeSubscriptions.has(merchantId.toString());
+};
+
+
 export { connectMerchant, disconnectMerchant };
