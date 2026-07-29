@@ -20,6 +20,20 @@ const deliverWebhook = async function (payment, merchant) {
 
     const payloadString = JSON.stringify(payload);
 
+    const webhookRecord = await webhookModel.create({
+        paymentRequest: payment._id,
+        merchant: merchant._id,
+        payload,
+        status: "pending",
+        attempts: 0
+    });
+
+    await attemptDelivery(webhookRecord, merchant, payloadString);
+};
+
+
+const attemptDelivery = async function (webhookRecord, merchant, payloadString) {
+
     const rawWebhookSecret = decrypt(
         merchant.webhookEncryption.iv,
         merchant.webhookEncryption.authTag,
@@ -31,12 +45,7 @@ const deliverWebhook = async function (payment, merchant) {
         .update(payloadString)
         .digest("hex");
 
-    const webhookRecord = await webhookModel.create({
-        paymentRequest: payment._id,
-        merchant: merchant._id,
-        payload,
-        status: "pending"
-    });
+    let delivered = false;
 
     try {
         const response = await fetch(merchant.webhookUrl, {
@@ -47,26 +56,46 @@ const deliverWebhook = async function (payment, merchant) {
             },
             body: payloadString
         });
+        delivered = response.ok;
+    } catch (err) {
+        delivered = false;
+    }
 
-        if (response.ok) {
-            webhookRecord.status = "delivered";
-            webhookRecord.lastAttemptAt = new Date();
-            webhookRecord.attempts += 1;
+    webhookRecord.attempts += 1;
+    webhookRecord.lastAttemptAt = new Date();
+
+    if (delivered) {
+        webhookRecord.status = "delivered";
+        webhookRecord.nextRetryAt = undefined;
+    } else {
+        const backoffSchedule = [60, 300, 1800, 7200]; // seconds: 1m, 5m, 30m, 2h
+        if (webhookRecord.attempts >= backoffSchedule.length) {
+            webhookRecord.status = "failed"; // permanent give-up
+            webhookRecord.nextRetryAt = undefined;
         } else {
             webhookRecord.status = "failed";
-            webhookRecord.attempts += 1;
-            webhookRecord.lastAttemptAt = new Date();
-            webhookRecord.nextRetryAt = new Date(Date.now() + 60 * 1000);
+            const delaySeconds = backoffSchedule[webhookRecord.attempts - 1];
+            webhookRecord.nextRetryAt = new Date(Date.now() + delaySeconds * 1000);
         }
-    } catch (err) {
-        webhookRecord.status = "failed";
-        webhookRecord.attempts += 1;
-        webhookRecord.lastAttemptAt = new Date();
-        webhookRecord.nextRetryAt = new Date(Date.now() + 60 * 1000);
     }
 
     await webhookRecord.save();
 };
 
 
-export { deliverWebhook };
+const retryFailedWebhooks = async function () {
+
+    const dueWebhooks = await webhookModel
+        .find({ status: "failed", nextRetryAt: { $lte: new Date() } })
+        .populate("merchant");
+
+    for (const webhookRecord of dueWebhooks) {
+        const payloadString = JSON.stringify(webhookRecord.payload);
+        await attemptDelivery(webhookRecord, webhookRecord.merchant, payloadString);
+    }
+};
+
+setInterval(retryFailedWebhooks, 60 * 1000); // check every minute
+
+
+export { deliverWebhook, retryFailedWebhooks };
