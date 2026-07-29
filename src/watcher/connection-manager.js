@@ -1,7 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { verifyTransaction } from "./solana.service.js";
-import { reconcilePendingPayments } from "./solana.service.js";
-import { deliverWebhook } from "./webhook.service.js";
+import { verifyTransaction, reconcilePendingPayments } from "../services/solana.service.js";
+import { deliverWebhook } from "../services/webhook.service.js";
+import { paymentModel } from "../models/payment-request.model.js";
 
 
 const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed");
@@ -66,4 +66,4 @@ const isConnected = function (merchantId) {
 };
 
 
-export { connectMerchant, disconnectMerchant };
+export { connectMerchant, disconnectMerchant, isConnected };

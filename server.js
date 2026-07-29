@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { app } from "./src/app.js";
 import { connectDB } from "./src/db/db.js";
+import { startWatcher } from "./src/watcher/watcher.js";
 
 dotenv.config({})
 
@@ -11,6 +12,7 @@ connectDB()
     app.listen(port, () => {
         console.log(`app is live on http://localhost:${port}`);
     })
+    startWatcher();
 })
 
 .catch((err) => {

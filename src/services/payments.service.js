@@ -5,6 +5,7 @@ import BigNumber from "bignumber.js";
 import { ApiError } from "../utils/api-error.js";
 import { merchantModel } from "../models/merchant.model.js";
 import { paymentModel } from "../models/payment-request.model.js";
+import { isConnected, connectMerchant } from "../watcher/connection-manager.js";
 
 
 const createPaymentService = async function (merchant, amount, currency, label, message) {
