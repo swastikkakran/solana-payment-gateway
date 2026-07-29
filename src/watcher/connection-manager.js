@@ -27,7 +27,15 @@ const handleLog = async function (logs, merchant) {
 
 const connectMerchant = async function (merchant) {
 
-    await reconcilePendingPayments(merchant);
+    const hasPending = await paymentModel.exists({
+        merchant: merchant._id,
+        status: "pending",
+        expiresAt: { $gt: new Date() }
+    });
+
+    if (hasPending) {
+        await reconcilePendingPayments(merchant);
+    }
 
     const subscriptionId = connection.onLogs(
         new PublicKey(merchant.payoutWallet),
