@@ -34,6 +34,10 @@ const createPaymentService = async function (merchant, amount, currency, label, 
         expiresAt: new Date(Date.now() + (1000*60*15))
     })
 
+    if (!isConnected(merchant._id)) {
+    await connectMerchant(merchant);
+    }
+
     return { solanaPayUrl, paymentRequestData };
 }
 
