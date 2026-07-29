@@ -12,7 +12,7 @@ app.use(cors())
 //auth router
 app.use("/api/v1/auth", authRouter)
 //payment router
-app.use("api/v1/payments", paymentRouter)
+app.use("/api/v1/payments", paymentRouter)
 
 
 app.use((err, req, res, next) => {
