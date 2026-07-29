@@ -1,4 +1,4 @@
-const asyncHandler = async function (requestHandler) {
+const asyncHandler = function (requestHandler) {
     
     return (req, res, next) => {
         Promise
