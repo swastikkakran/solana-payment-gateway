@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { verifyTransaction, reconcilePendingPayments } from "../services/solana.service.js";
-import { deliverWebhook } from "../services/webhook.service.js";
+import { deliverWebhook, confirmAndNotify } from "../services/webhook.service.js";
 import { paymentModel } from "../models/payment-request.model.js";
 
 
@@ -9,18 +9,17 @@ const activeSubscriptions = new Map();
 
 
 const handleLog = async function (logs, merchant) {
-    const signature = logs.signature;
+    console.log("handleLog fired! signature:", logs.signature);
+    try {
+        const result = await verifyTransaction(logs.signature, merchant);
+        logger.info({ signature: logs.signature }, "handleLog fired");
+        
 
-    const result = await verifyTransaction(signature, merchant);
-
-    if (result.verified) {
-        result.payment.status = "confirmed";
-        result.payment.transactionSignature = result.transactionSignature;
-        result.payment.payerWallet = result.payerWallet;
-        result.payment.confirmedAt = new Date();
-        await result.payment.save();
-
-        await deliverWebhook(result.payment, merchant);
+        if (result.verified) {
+            await confirmAndNotify(result, merchant)
+        }
+    } catch (err) {
+        logger.error({ err }, "handleLog crashed");
     }
 };
 
