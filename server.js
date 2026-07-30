@@ -1,9 +1,8 @@
-import dotenv from "dotenv";
+import "./src/utils/env.js";
 import { app } from "./src/app.js";
 import { connectDB } from "./src/db/db.js";
 import { startWatcher } from "./src/watcher/watcher.js";
 
-dotenv.config({})
 
 const port = process.env.PORT || 3000
 
