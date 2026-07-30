@@ -1,5 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { paymentModel } from "../models/payment-request.model.js";
+import { confirmAndNotify } from "../services/webhook.service.js";
 
 const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed");
 
@@ -79,11 +80,7 @@ const reconcilePendingPayments = async function (merchant) {
         const result = await verifyTransaction(sigInfo.signature, merchant);
 
         if (result.verified) {
-            result.payment.status = "confirmed";
-            result.payment.transactionSignature = result.transactionSignature;
-            result.payment.payerWallet = result.payerWallet;
-            result.payment.confirmedAt = new Date();
-            await result.payment.save();
+            await confirmAndNotify(result, merchant)
         }
         // if not verified, either it's an unrelated tx (no matching payment)
         // or a real mismatch — either way, nothing to update, just move on
