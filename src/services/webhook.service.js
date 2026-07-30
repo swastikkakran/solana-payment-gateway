@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { decrypt } from "../utils/crypto.js";
 import { webhookModel } from "../models/webhook.model.js";
+import { logger } from "../utils/logger.js";
 
 
 const deliverWebhook = async function (payment, merchant) {
@@ -56,8 +57,10 @@ const attemptDelivery = async function (webhookRecord, merchant, payloadString) 
             },
             body: payloadString
         });
+        logger.info({ status: response.status }, "webhook status");
         delivered = response.ok;
     } catch (err) {
+        logger.error({ err }, "webhook error");
         delivered = false;
     }
 
@@ -98,4 +101,15 @@ const retryFailedWebhooks = async function () {
 setInterval(retryFailedWebhooks, 60 * 1000); // check every minute
 
 
-export { deliverWebhook, retryFailedWebhooks };
+const confirmAndNotify = async function (result, merchant) {
+    result.payment.status = "confirmed";
+    result.payment.transactionSignature = result.transactionSignature;
+    result.payment.payerWallet = result.payerWallet;
+    result.payment.confirmedAt = new Date();
+    await result.payment.save();
+
+    await deliverWebhook(result.payment, merchant);
+};
+
+
+export { deliverWebhook, retryFailedWebhooks, confirmAndNotify };
