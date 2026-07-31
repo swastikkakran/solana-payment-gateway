@@ -3,6 +3,7 @@ import { generateApiKey, generateSecretKey, encrypt } from "../utils/crypto.js";
 import { merchantModel } from "../models/merchant.model.js";
 import { paymentModel } from "../models/payment-request.model.js";
 import bcrypt from "bcrypt";
+import { disconnectMerchant } from "../watcher/connection-manager.js";
 
 
 const registerService = async function (email, webhookUrl, payoutWallet) {
@@ -57,6 +58,8 @@ const deleteMerchantService = async function (merchant) {
     
     const pendingPayments = await paymentModel.findOne({ merchant: merchant._id, status: "pending" })
     if (pendingPayments) throw new ApiError(400, "Pending payment for an order! Cannot perform account deletion.")
+
+    await disconnectMerchant(merchant._id)
     const deletedForm = await merchantModel.findByIdAndDelete(merchant._id)
     return deletedForm
 }
