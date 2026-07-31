@@ -10,7 +10,7 @@ const activeSubscriptions = new Map();
 
 
 const handleLog = async function (logs, merchant) {
-    console.log("handleLog fired! signature:", logs.signature);
+    
     try {
         const result = await verifyTransaction(logs.signature, merchant);
         logger.info({ signature: logs.signature }, "handleLog fired");
