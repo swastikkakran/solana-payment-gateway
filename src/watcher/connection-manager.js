@@ -2,6 +2,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { verifyTransaction, reconcilePendingPayments } from "../services/solana.service.js";
 import { deliverWebhook, confirmAndNotify } from "../services/webhook.service.js";
 import { paymentModel } from "../models/payment-request.model.js";
+import { logger } from "../utils/logger.js";
 
 
 const connection = new Connection(process.env.SOLANA_RPC_URL, "confirmed");
