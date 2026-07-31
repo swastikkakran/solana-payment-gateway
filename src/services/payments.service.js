@@ -3,7 +3,6 @@ import { PublicKey } from "@solana/web3.js";
 import { encodeURL } from "@solana/pay";
 import BigNumber from "bignumber.js";
 import { ApiError } from "../utils/api-error.js";
-import { merchantModel } from "../models/merchant.model.js";
 import { paymentModel } from "../models/payment-request.model.js";
 import { isConnected, connectMerchant } from "../watcher/connection-manager.js";
 
