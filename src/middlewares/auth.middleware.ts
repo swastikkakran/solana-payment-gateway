@@ -4,7 +4,7 @@ import { merchantModel } from "../models/merchant.model.js";
 import bcrypt from "bcrypt";
 
 
-const checkCredentials = async function (apiKey) {
+const checkCredentials = async function (apiKey: string | string[]) {
     
     const existingMerchant = await merchantModel.findOne({ apiKey: apiKey })
     return existingMerchant;
@@ -22,15 +22,15 @@ const normalApiMiddleware = asyncHandler(async function (req, res, next) {
     if (!existingMerchant) {
         const tryPreviousCredentials = await merchantModel.findOne({ "previousCredentials.apiKey": apiKey })
         if (!tryPreviousCredentials) throw new ApiError(401, "Unauthorized access!")
-        if (tryPreviousCredentials.previousCredentials.expiresAt < new Date()) throw new ApiError(401, "Unauthorized access!")
+        if (tryPreviousCredentials.previousCredentials!.expiresAt < new Date()) throw new ApiError(401, "Unauthorized access!")
 
-        const tryPreviousSecret = await bcrypt.compare(apiSecret, tryPreviousCredentials.previousCredentials.apiSecretHash)
+        const tryPreviousSecret = await bcrypt.compare(apiSecret as string, tryPreviousCredentials.previousCredentials!.apiSecretHash)
         if (!tryPreviousSecret) throw new ApiError(401, "Unauthorized access!")
         
         req.merchant = tryPreviousCredentials
     }
     else {
-        const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
+        const isApiSecretValid = await bcrypt.compare(apiSecret as string, existingMerchant.apiSecretHash)
         if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
         req.merchant = existingMerchant
         }
@@ -47,7 +47,7 @@ const strictApiMiddleware = asyncHandler(async function (req, res, next) {
 
     const existingMerchant = await checkCredentials(apiKey)
     if (!existingMerchant) throw new ApiError(401, "Unauthorized access!")
-    const isApiSecretValid = await bcrypt.compare(apiSecret, existingMerchant.apiSecretHash)
+    const isApiSecretValid = await bcrypt.compare(apiSecret as string, existingMerchant.apiSecretHash)
     if (!isApiSecretValid) throw new ApiError(401, "Unauthorized access!")
 
     req.merchant = existingMerchant
