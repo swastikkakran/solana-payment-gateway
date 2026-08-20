@@ -1,8 +1,15 @@
+type apiError = { field: string | number | undefined; message: string };
+
 class ApiError extends Error {
+    statusCode: number
+    data: null
+    success: boolean
+    errors: apiError[]
+
     constructor(
-        statusCode,
+        statusCode: number,
         message = 'something went wrong',
-        errors = [],
+        errors: apiError[] = [],
         stack = ""
     ) {
         super(message)
