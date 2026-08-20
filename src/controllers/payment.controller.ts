@@ -34,7 +34,12 @@ const fetchAllPaymentsController = asyncHandler(async function (req, res) {
     const merchant = req.merchant;
     const { status, page, limit } = req.query;
 
-    const payments = await fetchAllPaymentsService(merchant, status, page, limit);
+    const payments = await fetchAllPaymentsService(
+        merchant!,
+        status as string,
+        page ? Number(page) : undefined,
+        limit ? Number(limit) : undefined
+    );
 
     res
         .status(200)
