@@ -1,4 +1,23 @@
-import mongoose from "mongoose";
+import mongoose, { Document } from "mongoose";
+
+interface IMerchant extends Document {
+    email: string;
+    apiKey: string;
+    apiSecretHash: string;
+    webhookUrl: string;
+    webhookEncryption: {
+        encryptedWebhookSecret: string;
+        iv: string;
+        authTag: string;
+    };
+    payoutWallet: string;
+    previousCredentials?: {
+        apiKey: string;
+        apiSecretHash: string;
+        expiresAt: Date;
+    };
+}
+
 
 const merchantSchema = new mongoose.Schema({
     email: {
@@ -48,4 +67,4 @@ const merchantSchema = new mongoose.Schema({
         }
 }, { timestamps: true });
 
-export const merchantModel = mongoose.model("merchant", merchantSchema);
+export const merchantModel = mongoose.model<IMerchant>("merchant", merchantSchema);

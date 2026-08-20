@@ -1,4 +1,15 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
+
+interface IWebhook extends Document {
+    paymentRequest: Types.ObjectId;
+    merchant: Types.ObjectId;
+    payload: Record<string, unknown>;
+    status: "pending" | "delivered" | "failed";
+    attempts: number;
+    lastAttemptAt?: Date;
+    nextRetryAt?: Date;
+}
+
 
 const webhookSchema = new mongoose.Schema({
     paymentRequest: {
@@ -31,4 +42,4 @@ const webhookSchema = new mongoose.Schema({
     nextRetryAt: Date,
 }, { timestamps: true })
 
-export const webhookModel = mongoose.model("webhook", webhookSchema)
+export const webhookModel = mongoose.model<IWebhook>("webhook", webhookSchema);

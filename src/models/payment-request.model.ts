@@ -1,4 +1,19 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
+
+interface IPayment extends Document {
+    merchant: Types.ObjectId;
+    reference: string;
+    amount: number;
+    currency: "SOL" | "USDC";
+    label?: string;
+    message?: string;
+    status: "pending" | "confirmed" | "expired" | "failed";
+    transactionSignature?: string;
+    payerWallet?: string;
+    expiresAt?: Date;
+    confirmedAt?: Date;
+}
+
 
 const paymentSchema = new mongoose.Schema({
     merchant: {
@@ -39,4 +54,4 @@ const paymentSchema = new mongoose.Schema({
     confirmedAt: Date,
 }, { timestamps: true })
 
-export const paymentModel = mongoose.model("payment", paymentSchema) 
+export const paymentModel = mongoose.model<IPayment>("payment", paymentSchema); 
