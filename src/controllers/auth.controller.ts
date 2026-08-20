@@ -17,7 +17,7 @@ const registerController = asyncHandler(async function (req, res) {
 const keyRotationController = asyncHandler(async function (req, res) {
     
     const merchant = req.merchant;
-    const newKeys = await keyRotationService(merchant)
+    const newKeys = await keyRotationService(merchant!)
 
     res
         .status(201)
@@ -28,7 +28,7 @@ const keyRotationController = asyncHandler(async function (req, res) {
 const deleteMerchantController = asyncHandler(async function (req, res) {
     
     const merchant = req.merchant;
-    const deletedMerchant = await deleteMerchantService(merchant);
+    const deletedMerchant = await deleteMerchantService(merchant!);
 
     res
         .status(200)
