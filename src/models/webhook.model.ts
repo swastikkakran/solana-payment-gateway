@@ -1,6 +1,6 @@
 import mongoose, { Document, Types } from "mongoose";
 
-interface IWebhook extends Document {
+export interface IWebhook extends Document {
     paymentRequest: Types.ObjectId;
     merchant: Types.ObjectId;
     payload: Record<string, unknown>;

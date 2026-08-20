@@ -2,9 +2,21 @@ import crypto from "crypto";
 import { decrypt } from "../utils/crypto.js";
 import { webhookModel } from "../models/webhook.model.js";
 import { logger } from "../utils/logger.js";
+import { IMerchant } from "../models/merchant.model.js";
+import { IPayment } from "../models/payment-request.model.js";
+import { IWebhook } from "../models/webhook.model.js";
+import { HydratedDocument } from "mongoose";
 
 
-const deliverWebhook = async function (payment, merchant) {
+type VerificationResult = {
+    payment: IPayment;
+    transactionSignature: string;
+    payerWallet: string;
+};
+
+type PopulatedWebhook = HydratedDocument<IWebhook, { merchant: IMerchant }>;
+
+const deliverWebhook = async function (payment: IPayment, merchant: IMerchant) {
 
     const payload = {
         event: "payment.confirmed",
@@ -33,7 +45,7 @@ const deliverWebhook = async function (payment, merchant) {
 };
 
 
-const attemptDelivery = async function (webhookRecord, merchant, payloadString) {
+const attemptDelivery = async function (webhookRecord: IWebhook, merchant: IMerchant, payloadString: string) {
 
     const rawWebhookSecret = decrypt(
         merchant.webhookEncryption.iv,
@@ -90,18 +102,19 @@ const retryFailedWebhooks = async function () {
 
     const dueWebhooks = await webhookModel
         .find({ status: "failed", nextRetryAt: { $lte: new Date() } })
-        .populate("merchant");
+        .populate("merchant")as unknown as PopulatedWebhook[];
 
     for (const webhookRecord of dueWebhooks) {
-        const payloadString = JSON.stringify(webhookRecord.payload);
-        await attemptDelivery(webhookRecord, webhookRecord.merchant, payloadString);
+        const record = webhookRecord as unknown as IWebhook & { merchant: IMerchant };
+        const payloadString = JSON.stringify(record.payload);
+        await attemptDelivery(record, record.merchant, payloadString);
     }
 };
 
 setInterval(retryFailedWebhooks, 60 * 1000); // check every minute
 
 
-const confirmAndNotify = async function (result, merchant) {
+const confirmAndNotify = async function (result: VerificationResult, merchant: IMerchant) {
     result.payment.status = "confirmed";
     result.payment.transactionSignature = result.transactionSignature;
     result.payment.payerWallet = result.payerWallet;

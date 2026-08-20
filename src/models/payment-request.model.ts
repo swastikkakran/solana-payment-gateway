@@ -1,6 +1,6 @@
 import mongoose, { Document, Types } from "mongoose";
 
-interface IPayment extends Document {
+export interface IPayment extends Document {
     merchant: Types.ObjectId;
     reference: string;
     amount: number;
