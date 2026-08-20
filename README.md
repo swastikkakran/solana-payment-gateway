@@ -219,7 +219,6 @@ Documented honestly rather than hidden — these are deliberate scoping decision
 - **Reconciliation sweeps check the most recent 50 transactions** against a merchant's wallet. A merchant with very high transaction volume and many simultaneously pending payments could theoretically have an older pending payment fall outside this window during a sweep.
 - **`amount` and `currency` aren't independently validated beyond the schema enum at request time.** This is safe because on-chain verification is the actual backstop — a payment request can't be falsely confirmed regardless of what's submitted at creation, since confirmation requires a real matching on-chain transaction. Invalid input at worst creates a payment request that will simply never confirm. Stricter input validation is deferred to a later version.
 - **SOL and USDC only.** No other SPL tokens are currently supported.
-- **No refunds.** Out of scope for v1 — this system is detection/verification only, not fund movement (by design — it's non-custodial).
 
 ---
 
@@ -248,6 +247,6 @@ This will help me get familiar with the kit SDK, also a fun way to upgrade my pr
 
 ## Roadmap
 
-- Migrate the existing program into TypeScript.
+- Migrate the existing program into TypeScript. #Done
 - Migrate to @solana/kit from @solana/web3.js.
 - Add on onchain program to it (I have no idea what else I can add to it, but maybe in future, I will make it on chain too).
