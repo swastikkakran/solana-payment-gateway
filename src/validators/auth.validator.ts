@@ -24,3 +24,4 @@ const registerMerchantSchema = z.object({
 });
 
 export { registerMerchantSchema };
+export type RegisterMerchantInput = z.infer<typeof registerMerchantSchema>;
