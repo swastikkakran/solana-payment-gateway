@@ -8,10 +8,14 @@ const generateSecretKey = function () {
     return crypto.randomBytes(32).toString("hex")
 }
 
+if (!process.env.ENCRYPTION_MASTER_KEY) {
+    throw new Error("ENCRYPTION_MASTER_KEY is not set");
+}
+
 const encryptionKey = Buffer.from(process.env.ENCRYPTION_MASTER_KEY, "hex");
 const algorithm = 'aes-256-gcm';
 
-const encrypt = function (text) {
+const encrypt = function (text: string) {
 
     const iv = crypto.randomBytes(12)
     const cipher = crypto.createCipheriv(algorithm, encryptionKey, iv);
@@ -26,7 +30,7 @@ const encrypt = function (text) {
         };
 };
 
-function decrypt(ivHex, authTagHex, ciphertextHex) {
+function decrypt(ivHex: string, authTagHex: string, ciphertextHex: string) {
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
 
