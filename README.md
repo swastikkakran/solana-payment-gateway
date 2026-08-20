@@ -239,9 +239,15 @@ src/
 
 ---
 
+## PS
+
+While researching about Solana SDKs, I got to know that the @solana/web3.js is been replaced by the @solana/kit. This is currently in development, but still many programs have been migrated to it. So I thought about migrating my project to it. So 1stly, I'm going to migrate all the code into TypeScript. and Then migrate the main watcher to @solana/kit. Why like this, because I'm learning native solana programs in rust on parallel.
+Why Do this at all? Because why not...
+This will help me get familiar with the kit SDK, also a fun way to upgrade my project. So, here is the revised Roadmap.
+
+
 ## Roadmap
 
-- Migrate the watcher to `@solana/web3.js` v2 (`RpcSubscriptions`, async iterators) for genuinely robust reconnection handling
-- Token-2022 support (transfer fees, interest-bearing mints break naive balance-diff parsing and need explicit handling)
-- Stricter input validation on payment creation
-- Merchant dashboard (React) for order/webhook visibility
+- Migrate the existing program into TypeScript.
+- Migrate to @solana/kit from @solana/web3.js.
+- Add on onchain program to it (I have no idea what else I can add to it, but maybe in future, I will make it on chain too).
