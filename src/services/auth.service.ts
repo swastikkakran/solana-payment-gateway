@@ -1,12 +1,12 @@
 import { ApiError } from "../utils/api-error.js";
 import { generateApiKey, generateSecretKey, encrypt } from "../utils/crypto.js";
-import { merchantModel } from "../models/merchant.model.js";
+import { merchantModel, IMerchant } from "../models/merchant.model.js";
 import { paymentModel } from "../models/payment-request.model.js";
 import bcrypt from "bcrypt";
 import { disconnectMerchant } from "../watcher/connection-manager.js";
 
 
-const registerService = async function (email, webhookUrl, payoutWallet) {
+const registerService = async function (email: string, webhookUrl: string, payoutWallet: string) {
     
     const existingUser = await merchantModel.findOne({ email: email });
     if (existingUser) throw new ApiError(409, "Email already exists!");
@@ -36,11 +36,11 @@ const registerService = async function (email, webhookUrl, payoutWallet) {
 }
 
 
-const keyRotationService = async function (merchant) {
+const keyRotationService = async function (merchant: IMerchant) {
 
-    merchant.previousCredentials.apiKey = merchant.apiKey;
-    merchant.previousCredentials.apiSecretHash = merchant.apiSecretHash;
-    merchant.previousCredentials.expiresAt = new Date(Date.now() + (1000*60*60*24))
+    merchant.previousCredentials!.apiKey = merchant.apiKey;
+    merchant.previousCredentials!.apiSecretHash = merchant.apiSecretHash;
+    merchant.previousCredentials!.expiresAt = new Date(Date.now() + (1000*60*60*24))
 
     const newApiKey = generateApiKey()
     const newApiSecret = generateSecretKey()
@@ -54,7 +54,7 @@ const keyRotationService = async function (merchant) {
 }
 
 
-const deleteMerchantService = async function (merchant) {
+const deleteMerchantService = async function (merchant: IMerchant) {
     
     const pendingPayments = await paymentModel.findOne({ merchant: merchant._id, status: "pending" })
     if (pendingPayments) throw new ApiError(400, "Pending payment for an order! Cannot perform account deletion.")

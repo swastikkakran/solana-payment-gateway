@@ -1,6 +1,6 @@
 import mongoose, { Document } from "mongoose";
 
-interface IMerchant extends Document {
+export interface IMerchant extends Document {
     email: string;
     apiKey: string;
     apiSecretHash: string;
