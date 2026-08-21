@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import { Request, Response, NextFunction } from "express";
+import { ApiError } from "./utils/api-error.js";
 //route imports
 import authRouter from "./routes/auth.route.js";
 import paymentRouter from "./routes/payment.route.js";
@@ -15,7 +17,7 @@ app.use("/api/v1/auth", authRouter)
 app.use("/api/v1/payments", paymentRouter)
 
 
-app.use((err, req, res, next) => {
+app.use((err: ApiError, req: Request, res: Response, next: NextFunction) => {
     const statusCode = err.statusCode || 500
     res.status(statusCode).json({
         success: false,
