@@ -69,7 +69,7 @@ const verifyTransaction = async function (merchant: IMerchant, sign: string) {
         const postAmount = parseFloat(postTokenBalance.uiTokenAmount.uiAmountString);
         const preAmount = parseFloat(preTokenBalance.uiTokenAmount.uiAmountString);
 
-        if (postAmount == null || preAmount == null) {
+        if (isNaN(postAmount) || isNaN(preAmount)) {
             return { verified: false, payment, reason: "Invalid or missing token amount values" };
         }
 
