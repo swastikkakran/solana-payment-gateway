@@ -9,9 +9,11 @@ import { HydratedDocument } from "mongoose";
 
 
 type VerificationResult = {
-    payment: IPayment;
-    transactionSignature: string;
-    payerWallet: string;
+    verified: boolean;
+    payment?: IPayment;
+    transactionSignature?: string;
+    payerWallet?: string | undefined;
+    reason?: string;
 };
 
 type PopulatedWebhook = HydratedDocument<IWebhook, { merchant: IMerchant }>;
@@ -115,6 +117,7 @@ setInterval(retryFailedWebhooks, 60 * 1000); // check every minute
 
 
 const confirmAndNotify = async function (result: VerificationResult, merchant: IMerchant) {
+    if (!result.payment) return;
     result.payment.status = "confirmed";
     result.payment.transactionSignature = result.transactionSignature;
     result.payment.payerWallet = result.payerWallet;

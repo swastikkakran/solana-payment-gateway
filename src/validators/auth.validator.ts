@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PublicKey } from "@solana/web3.js";
+import { address } from "@solana/kit";
 
 const registerMerchantSchema = z.object({
     email: z
@@ -15,7 +15,7 @@ const registerMerchantSchema = z.object({
         .string()
         .refine((val) => {
             try {
-                new PublicKey(val);
+                address(val);
                 return true;
             } catch {
                 return false;

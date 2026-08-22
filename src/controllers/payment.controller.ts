@@ -8,7 +8,7 @@ const createPaymentController = asyncHandler(async function (req, res) {
     const merchant = req.merchant;
     const { amount, currency, label, message } = req.body;
 
-    const { solanaPayUrl, paymentRequestData } = await createPaymentService(merchant, amount, currency, label, message);
+    const { solanaPayUrl, paymentRequestData } = await createPaymentService(merchant!, amount, currency, label, message);
 
     res
         .status(201)
@@ -19,9 +19,9 @@ const createPaymentController = asyncHandler(async function (req, res) {
 const fetchSinglePaymentController = asyncHandler(async function (req, res) {
     
     const merchant = req.merchant;
-    const paymentId = req.params.paymentId;
+    const paymentId = req.params.paymentId as string;
 
-    const payment = await fetchSinglePaymentService(merchant, paymentId)
+    const payment = await fetchSinglePaymentService(merchant!, paymentId)
 
     res
         .status(200)
@@ -36,7 +36,7 @@ const fetchAllPaymentsController = asyncHandler(async function (req, res) {
 
     const payments = await fetchAllPaymentsService(
         merchant!,
-        status as string,
+        status as "pending" | "confirmed" | "expired" | "failed",
         page ? Number(page) : undefined,
         limit ? Number(limit) : undefined
     );

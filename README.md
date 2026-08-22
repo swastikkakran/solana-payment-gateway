@@ -22,7 +22,8 @@ Merchant                  This API                    Solana                 Cus
    │──────────────────────────────────────────────────────────────────────────────>│
    │                          │                          │   customer approves     │
    │                          │                          │<────────────────────────┤
-   │                          │ live tx detected (onLogs)│                         │
+   │                          │ live tx detected         │                         │
+   │                          │ (logsNotifications)      │                         │
    │                          │<─────────────────────────┤                         │
    │                          │  verify amount/token/    │                         │
    │                          │  recipient/reference     │                         │
@@ -32,9 +33,9 @@ Merchant                  This API                    Solana                 Cus
 ```
 
 1. Merchant creates a payment request via the API.
-2. The backend generates a one-time **reference key** (a disposable public key used purely to tag the transaction — it never holds funds and never signs anything) and builds a [Solana Pay](https://docs.solanapay.com/) URL.
+2. The backend generates a one-time **reference key** (a disposable keypair used purely to tag the transaction — it never holds funds and never signs anything) and builds a [Solana Pay](https://docs.solanapay.com/) URL.
 3. The merchant shows this as a QR code or link. The customer pays directly from their own wallet to the merchant's wallet, on-chain.
-4. A live websocket subscription (`onLogs`) watches the merchant's payout wallet. The moment a matching transaction lands, it's parsed, verified against the expected amount/token/recipient/reference, and the payment is marked `confirmed`.
+4. A live WebSocket subscription (`logsNotifications`) watches the merchant's payout wallet. The moment a matching transaction lands, it's parsed, verified against the expected amount/token/recipient/reference, and the payment is marked `confirmed`.
 5. A signed webhook is delivered to the merchant's server, with automatic retry on failure.
 
 ---
@@ -49,12 +50,14 @@ The fix: at creation time, this backend generates a fresh keypair and includes *
 
 ## Detection: live watcher + reconciliation sweep
 
-Real-time detection alone isn't enough — a websocket subscription only catches events that happen *while it's connected*. If the server restarts or a connection drops, anything that happened during that gap would be missed. This system uses two complementary mechanisms:
+Real-time detection alone isn't enough — a WebSocket subscription only catches events that happen *while it's connected*. If the server restarts or a connection drops, anything that happened during that gap would be missed. This system uses two complementary mechanisms:
 
-- **Live subscription (`onLogs`)** — one websocket subscription per merchant, filtered to their `payoutWallet`. Fires in real time the moment a matching transaction lands.
-- **Reconciliation sweep** — runs once whenever a merchant's subscription is (re)established: at server boot, and whenever a merchant creates their first pending payment while unwatched. It queries recent transactions against the merchant's wallet directly and checks each one against currently pending payments — catching anything that happened while nothing was listening.
+- **Live subscription (`logsNotifications`)** — one WebSocket subscription per merchant, filtered to their `payoutWallet`. Fires in real time the moment a matching transaction lands. Managed via `AbortController` — each merchant's subscription can be cleanly cancelled without affecting others.
+- **Reconciliation sweep** — runs once whenever a merchant's subscription is (re)established: at server boot, and whenever a merchant creates their first pending payment while unwatched. It queries the 50 most recent transactions against the merchant's wallet and checks each one against currently pending payments — catching anything that happened while nothing was listening.
 
 Both paths converge on the same verification logic (`verifyTransaction`) and the same confirmation/webhook logic (`confirmAndNotify`), so a live-detected payment and a reconciled one are verified identically — no duplicated, divergent logic between the two.
+
+The watcher also auto-reconnects on unexpected crashes: if the `for await` loop on a subscription throws due to a network error, it detects that the abort was not intentional (via `controller.signal.aborted`) and restarts `connectMerchant` automatically.
 
 This was tested directly: a payment created, paid *while the server was offline*, and correctly picked up and confirmed by the reconciliation sweep on restart — with the webhook still firing correctly.
 
@@ -63,7 +66,7 @@ This was tested directly: a payment created, paid *while the server was offline*
 ## Security model
 
 - **API key + secret**, not sessions. This is a developer-facing API — merchants integrate from their own backend, not a browser — so there's no login flow. The API secret is the credential; it's shown once, at registration, and never stored or transmitted in raw form again (only its bcrypt hash is persisted).
-- **Credential rotation with a grace window.** Rotating keys doesn't require flipping a switch and hoping every server picks up the new key instantly — the previous credential set remains valid for 24 hours after rotation, then automatically stops working. (v1 supports exactly one grace-window credential set at a time; a second rotation within an active window immediately invalidates the first.)
+- **Credential rotation with a grace window.** Rotating keys doesn't require flipping a switch and hoping every server picks up the new key instantly — the previous credential set remains valid for 24 hours after rotation, then automatically stops working. (v2 supports exactly one grace-window credential set at a time; a second rotation within an active window immediately invalidates the first.)
 - **Webhook secrets are encrypted, not hashed.** This is a deliberate distinction from the API secret: an API secret only ever needs to be *compared against*, so a one-way bcrypt hash is correct and sufficient. A webhook secret needs to be *reused* every time a webhook is signed — so it's encrypted with AES-256-GCM instead, using a master key held outside the database (env var in this version; intended for a proper KMS in production), with the IV and auth tag stored alongside the ciphertext.
 - **Webhook payloads are HMAC-signed** (SHA-256) using each merchant's own webhook secret, sent as an `x-webhook-signature` header.
 
@@ -182,43 +185,45 @@ Create a `.env` file:
 ```env
 PORT=3000
 MONGO_URI=mongodb://localhost:27017/solana-payment-gateway
-SOLANA_RPC_URL=<your devnet RPC endpoint — a dedicated provider like Helius/QuickNode is strongly recommended over the public endpoint, which rate-limits aggressively>
+SOLANA_RPC_URL=<your devnet HTTP RPC endpoint — Helius or QuickNode recommended>
+SOLANA_RPC_WS_URL=<your devnet WebSocket RPC endpoint — same provider, wss:// protocol>
 SOLANA_CLUSTER=devnet
 USDC_MINT_ADDRESS=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
-ENCRYPTION_MASTER_KEY=<32-byte hex string — e.g. generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+ENCRYPTION_MASTER_KEY=<32-byte hex string — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
 LOG_LEVEL=info
 ```
 
+Note: two RPC URLs are required. The HTTP URL (`https://`) is used for RPC calls (`getTransaction`, `getSignaturesForAddress`). The WebSocket URL (`wss://`) is used for live log subscriptions. Most providers (Helius, QuickNode) give you both from the same dashboard — swap `https://` for `wss://` on the same endpoint.
+
+Build and run:
+
 ```bash
+npm run build
 npm run start
 ```
 
-The server connects to MongoDB, starts the API, and boots the watcher — reconnecting a live subscription for any merchant with an outstanding pending payment.
+Or for development without compiling:
+
+```bash
+npm run dev
+```
+
+The server connects to MongoDB, starts the API, and boots the watcher — restoring a live subscription for any merchant with an outstanding pending payment.
 
 ---
 
 ## Tech stack
 
-- **Node.js / Express** — REST API
-- **MongoDB / Mongoose** — merchants, payment requests, webhook delivery records
-- **@solana/web3.js** — RPC connection, transaction parsing, live log subscriptions
-- **@solana/pay** — Solana Pay URL construction
+- **Node.js / Express 5** — REST API
+- **TypeScript** — full type coverage across services, models, middlewares, and controllers
+- **MongoDB / Mongoose** — merchants, payment requests, webhook delivery records; typed via Mongoose document interfaces (`IMerchant`, `IPayment`, `IWebhook`)
+- **@solana/kit** — RPC calls (`createSolanaRpc`), WebSocket subscriptions (`createSolanaRpcSubscriptions`, `logsNotifications`), address types, keypair generation
+- **@solana/pay** (anza-xyz, v1) — Solana Pay URL construction, Kit-native
 - **bcrypt** — API secret hashing
 - **AES-256-GCM (Node `crypto`)** — webhook secret encryption
-- **Zod** — request validation
+- **Zod** — request validation with inferred TypeScript types
 - **pino** — structured logging
-
----
-
-## Known limitations (v1)
-
-Documented honestly rather than hidden — these are deliberate scoping decisions for a v1, not oversights:
-
-- **Websocket reconnection uses `@solana/web3.js` v1's `Connection`/`onLogs`**, which has a known internal reconnection issue (`_resetSubscriptions` can fail to clear a stale subscription ID, occasionally causing missed logs after a reconnect). This is mitigated, not eliminated, by the reconciliation sweep running on every reconnect. `@solana/web3.js` v2's `RpcSubscriptions` (async-iterator based) solves this properly and is the intended future migration.
-- **Credential rotation supports exactly one grace-window credential set at a time.** A second rotation within an active grace window immediately invalidates the first — no queue of multiple valid old credentials.
-- **Reconciliation sweeps check the most recent 50 transactions** against a merchant's wallet. A merchant with very high transaction volume and many simultaneously pending payments could theoretically have an older pending payment fall outside this window during a sweep.
-- **`amount` and `currency` aren't independently validated beyond the schema enum at request time.** This is safe because on-chain verification is the actual backstop — a payment request can't be falsely confirmed regardless of what's submitted at creation, since confirmation requires a real matching on-chain transaction. Invalid input at worst creates a payment request that will simply never confirm. Stricter input validation is deferred to a later version.
-- **SOL and USDC only.** No other SPL tokens are currently supported.
+- **tsx** — TypeScript execution for development
 
 ---
 
@@ -228,25 +233,50 @@ Documented honestly rather than hidden — these are deliberate scoping decision
 src/
 ├── controllers/     # HTTP request/response handling
 ├── services/        # business logic (auth, payments, on-chain verification, webhooks)
-├── middlewares/      # API-key auth, request validation
-├── models/           # Merchant, PaymentRequest, WebhookDelivery
-├── routes/            # Express route definitions
-├── validators/         # Zod schemas + param validation
-├── watcher/             # websocket connection lifecycle + boot-time reconciliation
-└── utils/                # error/response shaping, crypto, logging
+├── middlewares/     # API-key auth, request validation
+├── models/          # Merchant, PaymentRequest, WebhookDelivery (with TS interfaces)
+├── routes/          # Express route definitions
+├── types/           # Express Request augmentation (req.merchant)
+├── validators/      # Zod schemas + param validation
+├── watcher/         # WebSocket subscription lifecycle + boot-time reconciliation
+└── utils/           # error/response shaping, crypto, logging
 ```
 
 ---
 
-## PS
+## v1 → v2: what changed
 
-While researching about Solana SDKs, I got to know that the @solana/web3.js is been replaced by the @solana/kit. This is currently in development, but still many programs have been migrated to it. So I thought about migrating my project to it. So 1stly, I'm going to migrate all the code into TypeScript. and Then migrate the main watcher to @solana/kit. Why like this, because I'm learning native solana programs in rust on parallel.
-Why Do this at all? Because why not...
-This will help me get familiar with the kit SDK, also a fun way to upgrade my project. So, here is the revised Roadmap.
+v1 was written in JavaScript using `@solana/web3.js` v1. v2 is a full migration to TypeScript and `@solana/kit`.
 
+**Language:** JavaScript → TypeScript throughout. Strict mode enabled. Mongoose document interfaces on all three models. Express `Request` augmented with `req.merchant`.
 
-## Roadmap
+**Solana SDK:** `@solana/web3.js` → `@solana/kit`. Key changes:
+- `new Connection(url)` → `createSolanaRpc(url)` for HTTP RPC, `createSolanaRpcSubscriptions(wsUrl)` for WebSocket
+- `connection.onLogs(pubkey, callback)` → `rpcSubscriptions.logsNotifications({ mentions: [address] }).subscribe({ abortSignal })` with a `for await` loop
+- `Keypair.generate()` → `generateKeyPairSigner()` (async, returns `.address` directly as a base58 string)
+- `new PublicKey(str)` → `address(str)` (branded `Address` type)
+- Subscription management: numeric subscription IDs → `AbortController` stored per-merchant in a `Map`. Disconnect calls `controller.abort()`. Auto-reconnect on crash checks `controller.signal.aborted` before restarting.
 
-- Migrate the existing program into TypeScript. #Done
-- Migrate to @solana/kit from @solana/web3.js.
-- Add on onchain program to it (I have no idea what else I can add to it, but maybe in future, I will make it on chain too).
+**@solana/pay:** old `@solana/pay` (solana-labs) → `@solana/pay` v1 (anza-xyz), which is Kit-native.
+
+**Two RPC URLs:** v1 used one `Connection` for both HTTP and WebSocket. v2 splits them — `SOLANA_RPC_URL` (https) for RPC calls, `SOLANA_RPC_WS_URL` (wss) for subscriptions.
+
+---
+
+## Known limitations (v2)
+
+- **Credential rotation supports exactly one grace-window credential set at a time.** A second rotation within an active grace window immediately invalidates the first — no queue of multiple valid old credentials.
+- **Reconciliation sweeps check the most recent 50 transactions** against a merchant's wallet. A merchant with very high transaction volume and many simultaneously pending payments could theoretically have an older pending payment fall outside this window during a sweep.
+- **SOL and USDC only.** No other SPL tokens are currently supported.
+- **No refunds.** Out of scope — this system is detection/verification only, not fund movement (by design — it's non-custodial).
+
+---
+
+## Roadmap (v3)
+
+The next version extends the gateway with a genuine on-chain Solana program, making it more than a detection layer:
+
+- **On-chain merchant registry (Anchor program)** — merchant registration anchored on-chain via a PDA per merchant. Removes the off-chain MongoDB dependency for identity and creates an auditable, permissionless record of participating merchants.
+- **On-chain payment record** — confirmed payments written to chain, not just to MongoDB. Gives merchants a cryptographic, tamper-proof receipt for every confirmed payment without relying on the gateway's database.
+- **Token-2022 support** — transfer fees and interest-bearing mints break naive pre/post balance-diff parsing and need explicit handling at the on-chain level.
+- **Recurring payments** — an on-chain program for subscription-style payments with merchant-defined intervals and amounts, enforced by the program rather than the backend.

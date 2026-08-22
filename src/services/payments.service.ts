@@ -1,22 +1,23 @@
-import { Keypair } from "@solana/web3.js";
-import { PublicKey } from "@solana/web3.js";
+import { address, generateKeyPairSigner } from "@solana/kit";
 import { encodeURL } from "@solana/pay";
-import BigNumber from "bignumber.js";
 import { ApiError } from "../utils/api-error.js";
 import { paymentModel } from "../models/payment-request.model.js";
 import { isConnected, connectMerchant } from "../watcher/connection-manager.js";
+import { IMerchant } from "../models/merchant.model.js";
+import { Types } from "mongoose";
 
 
-const createPaymentService = async function (merchant, amount, currency, label, message) {
+const createPaymentService = async function (merchant: IMerchant, amount: number, currency: "SOL" | "USDC", label: string, message: string) {
     
-    const referenceKeyPair = Keypair.generate();
-    const reference = referenceKeyPair.publicKey;
+    const referenceKeyPair = generateKeyPairSigner();
+    const reference = (await referenceKeyPair).address;
 
     //creating pay url
+    if (!process.env.USDC_MINT_ADDRESS) throw new ApiError(404, "usdc mint address not found!")
     const url = encodeURL({
-        recipient: new PublicKey(merchant.payoutWallet),
-        amount: new BigNumber(amount),
-        splToken: currency === "USDC" ? new PublicKey(process.env.USDC_MINT_ADDRESS) : undefined,
+        recipient: address(merchant.payoutWallet),
+        amount,
+        splToken: currency === "USDC" ? address(process.env.USDC_MINT_ADDRESS) : undefined,
         reference: reference,
         label,
         message
@@ -26,7 +27,7 @@ const createPaymentService = async function (merchant, amount, currency, label, 
 
     const paymentRequestData = await paymentModel.create({
         merchant: merchant._id,
-        reference: reference.toBase58(),
+        reference: reference,
         amount: amount,
         currency: currency,
         label: label,
@@ -42,7 +43,7 @@ const createPaymentService = async function (merchant, amount, currency, label, 
 }
 
 
-const fetchSinglePaymentService = async function (merchant, paymentId) {
+const fetchSinglePaymentService = async function (merchant: IMerchant, paymentId: string) {
     
     const payment = await paymentModel.findOne({ _id: paymentId, merchant: merchant._id })
     if (!payment) throw new ApiError(404, "No payment found!")
@@ -51,9 +52,9 @@ const fetchSinglePaymentService = async function (merchant, paymentId) {
 }
 
 
-const fetchAllPaymentsService = async function (merchant, status, page = 1, limit = 20) {
+const fetchAllPaymentsService = async function (merchant: IMerchant, status: "pending" | "confirmed" | "expired" | "failed", page = 1, limit = 20) {
 
-    const filter = { merchant: merchant._id };
+    const filter: { merchant: Types.ObjectId; status?: "pending" | "confirmed" | "expired" | "failed" } = { merchant: merchant._id };
 
     if (status) {
         if (!["pending", "confirmed", "expired", "failed"].includes(status)) {
