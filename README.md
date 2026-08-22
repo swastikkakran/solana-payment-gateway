@@ -186,7 +186,7 @@ Create a `.env` file:
 PORT=3000
 MONGO_URI=mongodb://localhost:27017/solana-payment-gateway
 SOLANA_RPC_URL=<your devnet HTTP RPC endpoint — Helius or QuickNode recommended>
-SOLANA_RPC_WS_URL=<your devnet WebSocket RPC endpoint — same provider, wss:// protocol>
+SOLANA_RPC_WSS_URL=<your devnet WebSocket RPC endpoint — same provider, wss:// protocol>
 SOLANA_CLUSTER=devnet
 USDC_MINT_ADDRESS=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
 ENCRYPTION_MASTER_KEY=<32-byte hex string — generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
@@ -259,7 +259,7 @@ v1 was written in JavaScript using `@solana/web3.js` v1. v2 is a full migration 
 
 **@solana/pay:** old `@solana/pay` (solana-labs) → `@solana/pay` v1 (anza-xyz), which is Kit-native.
 
-**Two RPC URLs:** v1 used one `Connection` for both HTTP and WebSocket. v2 splits them — `SOLANA_RPC_URL` (https) for RPC calls, `SOLANA_RPC_WS_URL` (wss) for subscriptions.
+**Two RPC URLs:** v1 used one `Connection` for both HTTP and WebSocket. v2 splits them — `SOLANA_RPC_URL` (https) for RPC calls, `SOLANA_RPC_WSS_URL` (wss) for subscriptions.
 
 ---
 
