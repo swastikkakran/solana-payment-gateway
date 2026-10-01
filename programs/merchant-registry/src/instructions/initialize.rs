@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::{constants::MERCHANT_SEED};
+
 use crate::{state::merchant::Merchant};
 
 #[derive(Accounts)]
@@ -10,7 +12,7 @@ pub struct Initialize<'info> {
         init,
         payer = payer,
         space = 8 + Merchant::INIT_SPACE,
-        seeds = [b"merchant", payer.key().as_ref()],
+        seeds = [MERCHANT_SEED, payer.key().as_ref()],
         bump
     )]
     pub merchant: Account<'info, Merchant>,
