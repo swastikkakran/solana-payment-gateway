@@ -18,4 +18,8 @@ pub mod merchant_registry {
         crate::instructions::initialize::initialize_merchant(ctx)
     }
 
+    pub fn update(ctx: Context<Update>) -> Result<()> {
+        crate::instructions::update::update_account(ctx)
+    }
+
 }
