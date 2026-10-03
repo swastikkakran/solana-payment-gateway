@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
+
 use crate::state::merchant::Merchant;
 use crate::error::ErrorCode::UnauthorizedPayoutWallet;
+use crate::constants::MERCHANT_SEED;
 
 
 #[derive(Accounts)]
@@ -10,7 +12,7 @@ pub struct Update<'info> {
     #[account(
         mut,
         constraint = merchant.payout_wallet == payer.key() @ UnauthorizedPayoutWallet,
-        seeds = [b"merchant", payer.key().as_ref()],
+        seeds = [MERCHANT_SEED, payer.key().as_ref()],
         bump = merchant.bump,
     )]
     pub merchant: Account<'info, Merchant>,

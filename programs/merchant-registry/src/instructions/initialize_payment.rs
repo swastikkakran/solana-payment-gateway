@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::ORACLE_AUTHORITY;
 use crate::state::merchant::Merchant;
 use crate::state::payment::Payment;
+use crate::constants::PAYMENT_SEED;
 
 #[derive(Accounts)]
 #[instruction(reference_hash: [u8; 32])]
@@ -16,7 +17,7 @@ pub struct CreatePayment<'info>{
         init,
         payer = payer,
         space = 8 + Payment::INIT_SPACE,
-        seeds = [b"payment", merchant.key().as_ref(), reference_hash.as_ref()],
+        seeds = [PAYMENT_SEED, merchant.key().as_ref(), reference_hash.as_ref()],
         bump,
     )]
     pub payment: Account<'info, Payment>,

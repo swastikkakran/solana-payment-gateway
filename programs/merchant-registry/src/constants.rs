@@ -4,4 +4,7 @@ use anchor_lang::prelude::*;
 pub const MERCHANT_SEED: &[u8] = b"merchant";
 
 #[constant]
+pub const PAYMENT_SEED: &[u8] = b"payment";
+
+#[constant]
 pub const ORACLE_AUTHORITY: Pubkey = pubkey!("48JXnfoUSJ9Hs5sE7ougT1DNprjWp5urmg8ajuQ26ZWy");
