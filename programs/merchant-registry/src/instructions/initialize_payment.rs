@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::ORACLE_AUTHORITY;
+
 use crate::state::merchant::Merchant;
 use crate::state::payment::Payment;
-use crate::constants::PAYMENT_SEED;
+use crate::constants::{PAYMENT_SEED, ORACLE_AUTHORITY};
 
 #[derive(Accounts)]
 #[instruction(reference_hash: [u8; 32])]

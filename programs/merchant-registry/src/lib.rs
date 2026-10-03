@@ -26,4 +26,8 @@
             crate::instructions::initialize_payment::create_payment_record(ctx, reference_hash, amount, mint)
         }
 
+        pub fn mark_paid(ctx: Context<MarkPaid>, reference_hash: [u8; 32]) -> Result<()> {
+            crate::instructions::mark_payment_paid(ctx, reference_hash)
+        }
+
     }
