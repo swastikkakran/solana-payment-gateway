@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 
+use crate::ORACLE_AUTHORITY;
 use crate::state::merchant::Merchant;
 use crate::state::payment::Payment;
 
 #[derive(Accounts)]
 #[instruction(reference_hash: [u8; 32])]
 pub struct CreatePayment<'info>{
-    #[account(mut)]
+    #[account(
+        mut,
+        address = ORACLE_AUTHORITY,
+    )]
     pub payer: Signer<'info>,
     #[account(
         init,
