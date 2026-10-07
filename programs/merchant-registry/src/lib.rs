@@ -8,7 +8,7 @@
     pub use constants::*;
     pub use instructions::*;
 
-    declare_id!("4BTPQXTtfaZd5zwNLXJTwXMywPioEzuxJPyMFzkEt9K8");
+    declare_id!("8v5vhk23UWumv3ReypP8hetreRsLFMcACDhrn2mZb38b");
 
     #[program]
     pub mod merchant_registry {

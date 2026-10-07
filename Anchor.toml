@@ -6,10 +6,10 @@ skip_local_validator = true
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-merchant_registry = "4BTPQXTtfaZd5zwNLXJTwXMywPioEzuxJPyMFzkEt9K8"
-
 [programs.devnet]
+merchant_registry = "8v5vhk23UWumv3ReypP8hetreRsLFMcACDhrn2mZb38b"
+
+[programs.localnet]
 merchant_registry = "4BTPQXTtfaZd5zwNLXJTwXMywPioEzuxJPyMFzkEt9K8"
 
 [provider]
@@ -17,6 +17,6 @@ cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "yarn run ts-mocha -p ./tests/tsconfig.json -t 1000000 tests/**/*.ts"
 
 [hooks]
