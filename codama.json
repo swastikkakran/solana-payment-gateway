@@ -1,0 +1,12 @@
+{
+    "idl": "target/idl/merchant_registry.json",
+    "before": [],
+    "scripts": {
+        "js": {
+            "from": "@codama/renderers-js",
+            "args": [
+                "src/onchain/generated"
+            ]
+        }
+    }
+}

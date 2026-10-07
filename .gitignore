@@ -9,4 +9,7 @@ node_modules
 test-ledger
 .yarn
 .surfpool
+
 tests/fixtures
+
+src/onchain/generated
